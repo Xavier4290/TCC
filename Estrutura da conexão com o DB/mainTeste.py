@@ -10,11 +10,11 @@ from datetime import datetime, timedelta
 #             True);
 
 
-hoje = datetime.today()
-ontem = hoje - timedelta(days=1)
+#hoje = datetime.today()
+#ontem = hoje - timedelta(days=1)
 
 #deleta a informação do banco no dia seguinte
-if hoje > ontem:
+#if hoje > ontem:
     conexaoComDB.deletarInformacaoDoBanco('SEN011');
     print("Arquivo deletado")
 
