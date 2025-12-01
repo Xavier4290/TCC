@@ -23,7 +23,13 @@ class conexaoComDB:
         (sensor_id, tipo, localizacao_latitude, localizacao_longitude, localizacao_endereco, instalado_em, ativo)
         VALUES (%s, %s, %s, %s, %s, %s, %s)
         """
-    
+        
+        # dadosTXT_teste = """ 
+        # INSERT INTO dadosTXT_teste
+        # (dadosTXT)
+        # VALUES (%s)
+        # """
+        
         #a tupla valores será adicionada no banco de dados
         valores_dinamicos = (
             sensor_id,
@@ -34,7 +40,8 @@ class conexaoComDB:
             instalado_em,
             ativo,
         )
-    
+        
+       
         cursor.execute(sensor, valores_dinamicos) #Executa o insert
         conexaoMySQL.commit() #Envia as informações para o banco
         cursor.close() #Fecha a conexão
