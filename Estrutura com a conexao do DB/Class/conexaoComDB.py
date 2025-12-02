@@ -47,18 +47,32 @@ class conexaoComDB:
         cursor.close() #Fecha a conexão
         
         
-    # def enviaDadosParaTabelaMedicoesPluviometricas():
-    #     cursor = conexaoMySQL.cursor()
-        
     def deletarInformacaoDoBanco(sensor_id):
         
         cursor = conexaoMySQL.cursor()
         
         #Deletar por tempo ou pelo ID ?
-        sql = "DELETE FROM Sensores WHERE sensor_id >= %s" #Código para deletar a informação da tabela
-        valores = (sensor_id,)
+        # sql = "DELETE FROM Sensores WHERE sensor_id <= %s" #Código para deletar a informação da tabela
+        # valores = (sensor_id,)
         
-        cursor.execute(sql, valores)
+         # primeiro nas tabelas filhas
+        cursor.execute("""
+            DELETE FROM medicoespluviometricas
+            WHERE CAST(SUBSTRING(sensor_id, 4) AS UNSIGNED) <= CAST(SUBSTRING(%s, 4) AS UNSIGNED)
+        """, (sensor_id,))
+
+        cursor.execute("""
+            DELETE FROM dadosambientais
+            WHERE CAST(SUBSTRING(sensor_id, 4) AS UNSIGNED) <= CAST(SUBSTRING(%s, 4) AS UNSIGNED)
+        """, (sensor_id,))
+
+        # depois na tabela pai
+        cursor.execute("""
+            DELETE FROM sensores
+            WHERE CAST(SUBSTRING(sensor_id, 4) AS UNSIGNED) <= CAST(SUBSTRING(%s, 4) AS UNSIGNED)
+        """, (sensor_id,))
+
+        # cursor.execute(sql, valores)
         conexaoMySQL.commit()
         
         cursor.close()
