@@ -11,7 +11,7 @@ DB_CONFIG = {
     'host': '127.0.0.1',
     'user': 'root',
     'password': '',
-    'database': 'PluvioTech3'
+    'database': 'Pluvio'
 }
 
 # Salva os dados no banco dados e transforma em um arquivo CSV. Cria um pasta chamada backup dentro da nuvem 

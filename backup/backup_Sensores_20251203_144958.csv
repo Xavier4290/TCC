@@ -1,0 +1,10 @@
+sensor_id,tipo,localizacao_latitude,localizacao_longitude,localizacao_endereco,instalado_em,ativo
+SEN002,Pluviômetro,-23.5505,-46.6333,"Centro, São Paulo",2025-09-01 10:00:00,1
+SEN003,Pluviômetro,-2.69861,-44.8214,"São Bento, São Paulo",2025-09-09 11:00:00,1
+SEN004,Pluviômetro,-23.4739,-46.6108,"Tucuruvi, São Paulo",2025-09-05 11:00:00,1
+SEN005,Pluviômetro,-23.5874,-46.6576,"Parque Ibirapuera, São Paulo",2025-09-01 15:00:00,1
+SEN006,Pluviômetro,-21.0163,-48.7739,"Paraíso, São Paulo",2025-09-15 16:30:00,1
+SEN007,Pluviômetro,-23.55052,-46.633308,"Av. Paulista, São Paulo - SP",2024-05-12 14:30:00,1
+SEN008,Pluviômetro,-23.55052,-46.633308,"Av. Paulista, São Paulo - SP",2024-05-12 14:30:00,1
+SEN009,Pluviômetro,-23.55052,-46.633308,"Av. Paulista, São Paulo - SP",2024-05-12 14:30:00,1
+SEN010,Pluviômetro,-23.55052,-46.633308,"Av. Paulista, São Paulo - SP",2024-05-12 14:30:00,1
