@@ -5,9 +5,9 @@ from datetime import datetime, timedelta
 import glob
 
 DB_CONFIG = {
-    'host': '127.0.0.1',
-    'user': 'root',
-    'password': '',
+    'host': '100.74.148.84',
+    'user': 'postgres',
+    'password': '1234',
     'database': 'Pluvio'
 }
 

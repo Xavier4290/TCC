@@ -1,20 +1,20 @@
-import mysql.connector
+import psycopg2
 
-conexaoMySQL = mysql.connector.connect(
-    host='127.0.0.1',      # endereço do servidor
-    user='root',           # nome de usuário do MySQL
-    password='',  # senha do MySQL
+conexaoPostgre = psycopg2.connect(
+    host='100.74.148.84',      # endereço do servidor
+    user='postgres',           # nome de usuário do MySQL
+    password='1234',  # senha do MySQL
     database='Pluvio'  # nome do banco que você quer usar
 )
 
-if conexaoMySQL.is_connected(): 
+if conexaoPostgre.closed == 0: 
     print("Conectado ao banco de dados com sucesso")
     
     
 class AlertaDeChuva:
     
     def Alerta(localizacao_latitude, localizacao_longitude):
-            lat = float(localizacao_latitude)
+            lat = float(localizacao_latitude) 
             lon = float(localizacao_longitude)
             print("Alerta! Risco de alagamento")
             

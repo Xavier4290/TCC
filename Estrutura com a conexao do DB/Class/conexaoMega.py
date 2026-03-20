@@ -1,4 +1,4 @@
-import mysql.connector
+import psycopg2
 import pandas as pd
 import os
 from datetime import datetime
@@ -8,9 +8,9 @@ import subprocess
 # 🔧 CONFIGURAÇÕES
 # ===============================
 DB_CONFIG = {
-    'host': '127.0.0.1',
-    'user': 'root',
-    'password': '',
+    'host': '100.74.148.84',
+    'user': 'postgres',
+    'password': '1234',
     'database': 'Pluvio'
 }
 
@@ -43,11 +43,11 @@ class conexaoMega:
         self.conexao = None
 
     # ===========================
-    # 🔗 Conexão com o MySQL
+    # 🔗 Conexão com o PostgreSQL
     # ===========================
     def conectar_banco(self):
-        print("🔗 Conectando ao banco MySQL...")
-        self.conexao = mysql.connector.connect(**self.db_config)
+        print("🔗 Conectando ao banco PostgreSQL...")
+        self.conexao = psycopg2.connect(**self.db_config)
 
     # ===========================
     # 💾 Exportar tabela para CSV
@@ -77,7 +77,7 @@ class conexaoMega:
     def fechar_conexao(self):
         if self.conexao and self.conexao.is_connected():
             self.conexao.close()
-            print("🔒 Conexão MySQL encerrada.")
+            print("🔒 Conexão PostgreSQL encerrada.")
 
     # ===========================
     # 🚀 Executar processo completo
