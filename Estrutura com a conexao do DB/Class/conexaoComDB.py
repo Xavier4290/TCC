@@ -86,15 +86,16 @@ class conexaoComDB:
             print(linha)
             
 #Funções temporárias 
-    def deletarTabela():
-        cursor = conexaoPostgre.cursor()
-        cursor.execute("DROP TABLE Sensores;")
+    def deletarTablea(): 
+        cursor = conexaoPostgre.cursor() 
+        cursor.execute("DROP TABLE Sensores") 
+        conexaoPostgre.commit() 
         cursor.close()
         
     def criarTabela():
         cursor = conexaoPostgre.cursor()
         cursor.execute("""
-        CREATE TABLE sensores (
+        CREATE TABLE Sensores (
             sensor_id VARCHAR(36) PRIMARY KEY,
             tipo VARCHAR(50),
             localizacao_latitude DOUBLE PRECISION,
@@ -104,4 +105,5 @@ class conexaoComDB:
             ativo BOOLEAN
         );
     """)
+        conexaoPostgre.commit()
         cursor.close()

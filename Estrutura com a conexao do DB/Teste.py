@@ -17,7 +17,9 @@ opcao = True
 while opcao == True:
     op = int(input("Digite 1 para listar as informações do banco \n"+
                    "Digite 2 para enviar as informações para o banco\n"+
-                   "Digite 3 para enviar as informações para a nuvem"))
+                   "Digite 3 para enviar as informações para a nuvem \n"+
+                   "Digite 4 para deletar a tabela \n"+
+                   "Digite 5 para sair\n"))
     
     match op:
         case 1:
@@ -59,7 +61,10 @@ while opcao == True:
             conMega.enviar_para_mega()
             
         case 4:
-            conexaoComDB.deletarTabela()
+            conexaoComDB.deletarTablea()
             print("Tabela deletada com sucesso!")
+            conexaoComDB.criarTabela()
+            
         case _:
             print("Tchau, tchau!")
+            opcao = False
