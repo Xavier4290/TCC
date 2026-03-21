@@ -76,11 +76,32 @@ class conexaoComDB:
         conexaoPostgre.commit()
         
         cursor.close()
-
-     # Seleciona todas as informações na tabela
+        
+ # Seleciona todas as informações na tabela
     def selecionarTabela():
         cursor = conexaoPostgre.cursor()
         cursor.execute("select * from Sensores;")
         resultado = cursor.fetchall()
         for linha in resultado:
             print(linha)
+            
+#Funções temporárias 
+    def deletarTabela():
+        cursor = conexaoPostgre.cursor()
+        cursor.execute("DROP TABLE Sensores;")
+        cursor.close()
+        
+    def criarTabela():
+        cursor = conexaoPostgre.cursor()
+        cursor.execute("""
+        CREATE TABLE sensores (
+            sensor_id VARCHAR(36) PRIMARY KEY,
+            tipo VARCHAR(50),
+            localizacao_latitude DOUBLE PRECISION,
+            localizacao_longitude DOUBLE PRECISION,
+            localizacao_endereco VARCHAR(255),
+            instalado_em TIMESTAMP,
+            ativo BOOLEAN
+        );
+    """)
+        cursor.close()
