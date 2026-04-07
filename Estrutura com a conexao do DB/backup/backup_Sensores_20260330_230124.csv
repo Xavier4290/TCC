@@ -1,0 +1,7 @@
+sensor_id,tipo,localizacao_latitude,localizacao_longitude,localizacao_endereco,instalado_em,ativo
+SEN062,Pluviometro,-23.55052,-46.63331,Avenida Paulista 1000 - São Paulo,2025-01-01 12:30:00,True
+SEN063,Pluviometro,-23.55052,-46.63331,Avenida Paulista 1000 - São Paulo,2025-01-01 12:30:00,True
+SEN061,Pluviometro,-23.55052,-46.63331,Avenida Paulista 1000 - São Paulo,2025-01-01 12:30:00,True
+SEN070,Pluviometro,-23.55052,-46.63331,Avenida Paulista 1000 - São Paulo,2022-05-10 08:15:00,True
+SEN071,Pluviometro,-23.55052,-46.63331,Avenida Paulista 1000 - São Paulo,2023-09-21 14:45:30,True
+SEN072,Pluviometro,-23.55052,-46.63331,Avenida Paulista 1000 - São Paulo,2024-12-03 19:05:10,True

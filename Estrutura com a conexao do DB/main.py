@@ -28,7 +28,7 @@ conMega = conexaoMega(
 
 
 while True:
-    time.sleep(1)
+    time.sleep(1) 
     #caminho do arquivo TXT
     caminhos = glob.glob(r"C:\Users\guilh\Desktop\arquivos_TXT_para_teste\*.txt") #Seleciona todos os arquivos txt que estiverem dentro da pasta
 
@@ -49,7 +49,6 @@ while True:
     
     hoje = datetime.today()
     ontem = hoje - timedelta(days=1)
-
 
     conMega.conectar_banco()
     conMega.exportar_csv()
