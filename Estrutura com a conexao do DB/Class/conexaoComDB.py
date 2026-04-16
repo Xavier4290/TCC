@@ -14,17 +14,16 @@ class conexaoComDB:
     def __init__(self, conexao):
         self.conexao = conexaoPostgre
     
-    def enviaDadosParaTabelaSensor(sensor_id, tipo, localizacao_latitude, localizacao_longitude, localizacao_endereco, instalado_em, ativo): #Futuramente, será adicionado parâmentros nessa função
+    def enviaDadosParaTabelaSensor(data_hora, quantidade_ativacoes, chuva_acumulada_mm = 0): #Futuramente, será adicionado parâmentros nessa função
         cursor = conexaoPostgre.cursor()
 
         #Vai receber o insert e os valores que vão ser recebidos
-        sensor = """ 
-        INSERT INTO Sensores
-        (sensor_id, tipo, localizacao_latitude, localizacao_longitude, localizacao_endereco, instalado_em, ativo)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
-        """
+        medicoes_pluviometro = """ 
+        INSERT INTO medicoes_pluviometro
+        (data_hora, quantidade_ativacoes, chuva_acumulada_mm)
+        VALUES (%s, %s, %s) """ 
         
-        # dadosTXT_teste = """ 
+        # dadosTXT_teste = 
         # INSERT INTO dadosTXT_teste
         # (dadosTXT)
         # VALUES (%s)
@@ -32,17 +31,12 @@ class conexaoComDB:
         
         #a tupla valores será adicionada no banco de dados
         valores_dinamicos = (
-            sensor_id,
-            tipo,
-            localizacao_latitude,
-            localizacao_longitude,
-            localizacao_endereco,
-            instalado_em,
-            ativo,
-        )
-        
+          data_hora, 
+          quantidade_ativacoes, 
+          chuva_acumulada_mm
+         )
        
-        cursor.execute(sensor, valores_dinamicos) #Executa o insert
+        cursor.execute(medicoes_pluviometro, valores_dinamicos) #Executa o insert
         conexaoPostgre.commit() #Envia as informações para o banco
         cursor.close() #Fecha a conexão
         
@@ -80,29 +74,33 @@ class conexaoComDB:
  # Seleciona todas as informações na tabela
     def selecionarTabela():
         cursor = conexaoPostgre.cursor()
-        cursor.execute("select * from Sensores;")
+        cursor.execute("""
+            SELECT 
+                id,
+                TO_CHAR(data_hora, 'DD/MM/YYYY HH24:MI:SS'),
+                quantidade_ativacoes::float,
+                chuva_acumulada_mm::float
+            FROM medicoes_pluviometro;
+            """)
         resultado = cursor.fetchall()
         for linha in resultado:
-            print(linha)
+           print(linha)
             
 #Funções temporárias 
     def deletarTablea(): 
         cursor = conexaoPostgre.cursor() 
-        cursor.execute("DROP TABLE Sensores") 
+        cursor.execute("DROP TABLE medicoes_pluviometro") 
         conexaoPostgre.commit() 
         cursor.close()
         
     def criarTabela():
         cursor = conexaoPostgre.cursor()
         cursor.execute("""
-        CREATE TABLE Sensores (
-            sensor_id VARCHAR(36) PRIMARY KEY,
-            tipo VARCHAR(50),
-            localizacao_latitude DOUBLE PRECISION,
-            localizacao_longitude DOUBLE PRECISION,
-            localizacao_endereco VARCHAR(255),
-            instalado_em TIMESTAMP,
-            ativo BOOLEAN
+        CREATE TABLE medicoes_pluviometro (
+            id SERIAL PRIMARY KEY,
+            data_hora TIMESTAMP NOT NULL,
+            quantidade_ativacoes NUMERIC(5,2),
+            chuva_acumulada_mm NUMERIC(5,2)
         );
     """)
         conexaoPostgre.commit()

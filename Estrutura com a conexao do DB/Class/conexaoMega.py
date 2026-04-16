@@ -15,7 +15,7 @@ DB_CONFIG = {
 }
 
 # Salva os dados no banco dados e transforma em um arquivo CSV. Cria um pasta chamada backup dentro da nuvem 
-TABELA = 'Sensores'
+TABELA = 'medicoes_pluviometro'
 NOME_ARQUIVO = f"backup_{TABELA}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
 CAMINHO_LOCAL = os.path.abspath(NOME_ARQUIVO)
 MEGA_CMD_PATH = r"C:\Users\guilh\AppData\Local\MEGAcmd\mega-put"
