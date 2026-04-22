@@ -1,8 +1,11 @@
 import sqlite3
+import psycopg2
 
+from psycopg2.extensions import connection
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List
+from app.config import CONFIG_POSTGRES
 
 
 import sys
@@ -19,52 +22,51 @@ class RepositorioCentralSQLite:
     Nesta fase, ele persiste os lotes recebidos em SQLite para validar durabilidade.
     """
 
-    def __init__(self, caminho_banco: Path | str = CONFIG_POSTGRES ) -> None:
-        self.caminho_banco = Path(caminho_banco)
-        self.caminho_banco.parent.mkdir(parents=True, exist_ok=True)
+    def __init__(self, conexao):
+        self.conexao = conexao
+        
+    @staticmethod
+    def criar_conexao() -> connection:
+        """Cria e retorna uma nova conexão com o PostgreSQL."""
+        return psycopg2.connect(**CONFIG_POSTGRES)  
 
     def inicializar_banco(self) -> None:
         """Cria a tabela central de medições recebidas, caso ainda não exista."""
-        with sqlite3.connect(self.caminho_banco) as conexao:
-            cursor = conexao.cursor()
 
-            cursor.execute(
-                """
+        with self.conexao.cursor() as cursor:
+
+            cursor.execute("""
                 CREATE TABLE IF NOT EXISTS medicoes_recebidas (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id SERIAL PRIMARY KEY,
                     id_origem INTEGER NOT NULL UNIQUE,
-                    data_hora TEXT NOT NULL,
+                    data_hora TIMESTAMP NOT NULL,
                     pulsos INTEGER NOT NULL CHECK (pulsos >= 0),
-                    chuva_intervalo_mm REAL NOT NULL CHECK (chuva_intervalo_mm >= 0),
-                    chuva_acumulada_mm REAL NOT NULL CHECK (chuva_acumulada_mm >= 0),
-                    recebido_em TEXT NOT NULL
+                    chuva_intervalo_mm DOUBLE PRECISION NOT NULL CHECK (chuva_intervalo_mm >= 0),
+                    chuva_acumulada_mm DOUBLE PRECISION NOT NULL CHECK (chuva_acumulada_mm >= 0),
+                    recebido_em TIMESTAMP NOT NULL
                 )
-                """
-            )
+            """)
 
-            cursor.execute(
-                """
+            cursor.execute("""
                 CREATE INDEX IF NOT EXISTS idx_medicoes_recebidas_id_origem
                 ON medicoes_recebidas (id_origem)
-                """
-            )
+            """)
 
-            conexao.commit()
+        self.conexao.commit()
 
     def inserir_ou_confirmar_medicao(self, medicao: dict) -> bool:
         """
-        Insere a medição centralmente ou confirma como válida caso ela já exista.
-        Esse comportamento torna o recebimento idempotente para reenvios futuros.
+        Insere a medição centralmente ou ignora caso já exista.
+        Operação idempotente via constraint UNIQUE.
         """
+
         id_origem = int(medicao["id"])
-        recebido_em = self._agora_iso()
+        recebido_em = self._agora()
 
-        with sqlite3.connect(self.caminho_banco) as conexao:
-            cursor = conexao.cursor()
-
+        with self.conexao.cursor() as cursor:
             cursor.execute(
                 """
-                INSERT OR IGNORE INTO medicoes_recebidas (
+                INSERT INTO medicoes_recebidas (
                     id_origem,
                     data_hora,
                     pulsos,
@@ -72,7 +74,9 @@ class RepositorioCentralSQLite:
                     chuva_acumulada_mm,
                     recebido_em
                 )
-                VALUES (?, ?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                ON CONFLICT (id_origem)
+                DO NOTHING
                 """,
                 (
                     id_origem,
@@ -84,48 +88,47 @@ class RepositorioCentralSQLite:
                 ),
             )
 
-            conexao.commit()
+            resultado = cursor.fetchone()
+            self.conexao.commit()
 
-            if cursor.rowcount == 1:
-                return True
-
-        return self.registro_existe(id_origem)
+            return resultado is not None
 
     def registro_existe(self, id_origem: int) -> bool:
         """Verifica se a medição de origem já existe na base central."""
-        with sqlite3.connect(self.caminho_banco) as conexao:
-            cursor = conexao.cursor()
+
+        with self.conexao.cursor() as cursor:
             cursor.execute(
                 """
                 SELECT 1
                 FROM medicoes_recebidas
-                WHERE id_origem = ?
+                WHERE id_origem = %s
                 LIMIT 1
                 """,
                 (id_origem,),
             )
+
             linha = cursor.fetchone()
 
         return linha is not None
 
     def contar_registros(self) -> int:
         """Retorna a quantidade total de medições recebidas na base central."""
-        with sqlite3.connect(self.caminho_banco) as conexao:
-            cursor = conexao.cursor()
-            cursor.execute("SELECT COUNT(*) FROM medicoes_recebidas")
+
+        with self.conexao.cursor() as cursor:
+            cursor.execute(
+                "SELECT COUNT(*) FROM medicoes_recebidas"
+            )
             resultado = cursor.fetchone()
 
-        return int(resultado[0])
+        return int(resultado[0]) if resultado else 0
 
     def listar_todas(self, limite: int = 100) -> List[Dict[str, object]]:
         """Lista os registros da base central, ordenados por ID de origem."""
+
         if limite <= 0:
             raise ValueError("O limite deve ser maior que zero.")
 
-        with sqlite3.connect(self.caminho_banco) as conexao:
-            conexao.row_factory = sqlite3.Row
-            cursor = conexao.cursor()
-
+        with self.conexao.cursor() as cursor:
             cursor.execute(
                 """
                 SELECT
@@ -138,39 +141,40 @@ class RepositorioCentralSQLite:
                     recebido_em
                 FROM medicoes_recebidas
                 ORDER BY id_origem ASC
-                LIMIT ?
+                LIMIT %s
                 """,
                 (limite,),
             )
 
+            colunas = [desc[0] for desc in cursor.description]
             linhas = cursor.fetchall()
 
-        return [dict(linha) for linha in linhas]
+            return [dict(zip(colunas, linha)) for linha in linhas]
 
     def remover_todos_registros(self) -> int:
         """Remove todos os registros da base central de desenvolvimento."""
-        with sqlite3.connect(self.caminho_banco) as conexao:
-            cursor = conexao.cursor()
-            cursor.execute("DELETE FROM medicoes_recebidas")
-            conexao.commit()
-            return int(cursor.rowcount)
 
-    def _agora_iso(self) -> str:
-        """Gera timestamp em formato ISO para o instante de recebimento central."""
-        return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        with self.conexao.cursor() as cursor:
+            cursor.execute("DELETE FROM medicoes_recebidas")
+
+            self.conexao.commit()
+
+            return cursor.rowcount
+
+    def _agora(self) -> datetime:
+        """Retorna timestamp atual como datetime (compatível com PostgreSQL)."""
+        return datetime.now()
     
     def listar_ultimas_medicoes_como_modelos(self, limite: int = 6) -> list[Medicao]:
         """
         Retorna as últimas medições centrais em ordem cronológica crescente,
         convertidas para o modelo Medicao.
         """
+
         if limite <= 0:
             raise ValueError("O limite deve ser maior que zero.")
 
-        with sqlite3.connect(self.caminho_banco) as conexao:
-            conexao.row_factory = sqlite3.Row
-            cursor = conexao.cursor()
-
+        with self.conexao.cursor() as cursor:
             cursor.execute(
                 """
                 SELECT
@@ -181,7 +185,7 @@ class RepositorioCentralSQLite:
                     chuva_acumulada_mm
                 FROM medicoes_recebidas
                 ORDER BY id_origem DESC
-                LIMIT ?
+                LIMIT %s
                 """,
                 (limite,),
             )
@@ -192,44 +196,46 @@ class RepositorioCentralSQLite:
 
         return [
             Medicao(
-                data_hora=str(linha["data_hora"]),
-                pulsos=int(linha["pulsos"]),
-                chuva_intervalo_mm=float(linha["chuva_intervalo_mm"]),
-                chuva_acumulada_mm=float(linha["chuva_acumulada_mm"]),
+                data_hora=str(linha[1]),
+                pulsos=int(linha[2]),
+                chuva_intervalo_mm=float(linha[3]),
+                chuva_acumulada_mm=float(linha[4]),
             )
             for linha in linhas_ordenadas
         ]
 
     def listar_ultimas_medicoes_brutas(self, limite: int = 6) -> list[dict]:
-        """
-        Retorna as últimas medições centrais em ordem cronológica crescente,
-        preservando o id_origem.
-        """
-        if limite <= 0:
-            raise ValueError("O limite deve ser maior que zero.")
+            """
+            Retorna as últimas medições centrais em ordem cronológica crescente,
+            preservando o id_origem.
+            """
 
-        with sqlite3.connect(self.caminho_banco) as conexao:
-            conexao.row_factory = sqlite3.Row
-            cursor = conexao.cursor()
+            if limite <= 0:
+                raise ValueError("O limite deve ser maior que zero.")
 
-            cursor.execute(
-                """
-                SELECT
-                    id_origem,
-                    data_hora,
-                    pulsos,
-                    chuva_intervalo_mm,
-                    chuva_acumulada_mm
-                FROM medicoes_recebidas
-                ORDER BY id_origem DESC
-                LIMIT ?
-                """,
-                (limite,),
-            )
+            with self.conexao.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT
+                        id_origem,
+                        data_hora,
+                        pulsos,
+                        chuva_intervalo_mm,
+                        chuva_acumulada_mm
+                    FROM medicoes_recebidas
+                    ORDER BY id_origem DESC
+                    LIMIT %s
+                    """,
+                    (limite,),
+                )
 
-            linhas = cursor.fetchall()
+                colunas = [desc[0] for desc in cursor.description]
+                linhas = cursor.fetchall()
 
-        return [dict(linha) for linha in reversed(linhas)]
+            return [
+                dict(zip(colunas, linha))
+                for linha in reversed(linhas)
+            ]
 
 
     def listar_ultimas_medicoes_como_modelos(self, limite: int = 6) -> list[Medicao]:
@@ -237,6 +243,7 @@ class RepositorioCentralSQLite:
         Retorna as últimas medições centrais em ordem cronológica crescente,
         convertidas para o modelo Medicao.
         """
+
         registros = self.listar_ultimas_medicoes_brutas(limite=limite)
 
         return [

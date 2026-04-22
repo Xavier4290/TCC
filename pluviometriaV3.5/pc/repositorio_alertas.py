@@ -6,6 +6,7 @@ import psycopg2
 
 from app.config import CONFIG_POSTGRES
 from pc.gerador_alertas import ResultadoGeracaoAlerta
+from psycopg2.extensions import connection
 
 
 class RepositorioAlertasSQLite:
@@ -20,63 +21,65 @@ class RepositorioAlertasSQLite:
     #     self.caminho_banco = Path(caminho_banco)
     #     self.caminho_banco.parent.mkdir(parents=True, exist_ok=True)
     
-    def __init__(self, conexao) -> None:
+    def __init__(self, conexao: connection) -> None:
         self.conexao = conexao
-    
-    def criar_conexao():
+
+    @staticmethod
+    def criar_conexao() -> connection:
+        """Cria e retorna uma nova conexão com o PostgreSQL."""
         return psycopg2.connect(**CONFIG_POSTGRES)
 
     def inicializar_banco(self) -> None:
-        """Cria a tabela de alertas, caso ainda não exista."""
+        """Cria a tabela de alertas e índices necessários."""
+
         with self.conexao.cursor() as cursor:
+            self._criar_tabela(cursor)
+            self._criar_indices(cursor)
 
-            # Criação da tabela
-            cursor.execute(
-                """
-                CREATE TABLE IF NOT EXISTS alertas_chuva (
-                    id SERIAL PRIMARY KEY,
-                    id_ultima_medicao_origem INTEGER NOT NULL UNIQUE,
-                    data_hora_ultima_medicao TIMESTAMP NOT NULL,
-                    nivel_alerta TEXT NOT NULL,
-                    mensagem_alerta TEXT NOT NULL,
-                    justificativa_alerta TEXT NOT NULL,
-                    gerado_em TIMESTAMP NOT NULL
-                )
-                """
-            )
-
-            # Criação do índice
-            cursor.execute(
-                """
-                CREATE INDEX IF NOT EXISTS idx_alertas_chuva_id_ultima
-                ON alertas_chuva (id_ultima_medicao_origem)
-                """
-            )
-        
-        # Commit fora do cursor (boa prática)
         self.conexao.commit()
+
+    def _criar_tabela(self, cursor) -> None:
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS alertas_chuva (
+                id SERIAL PRIMARY KEY,
+                id_ultima_medicao_origem INTEGER NOT NULL UNIQUE,
+                data_hora_ultima_medicao TIMESTAMP NOT NULL,
+                nivel_alerta TEXT NOT NULL,
+                mensagem_alerta TEXT NOT NULL,
+                justificativa_alerta TEXT NOT NULL,
+                gerado_em TIMESTAMP NOT NULL
+            )
+            """
+        )
+
+    def _criar_indices(self, cursor) -> None:
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_alertas_chuva_id_ultima
+            ON alertas_chuva (id_ultima_medicao_origem)
+            """
+        )
 
     def inserir_ou_confirmar_alerta(
         self,
         id_ultima_medicao_origem: int,
-        data_hora_ultima_medicao: str,
+        data_hora_ultima_medicao,
         resultado_alerta: ResultadoGeracaoAlerta,
     ) -> bool:
         """
-        Insere o alerta ou confirma como válido caso ele já exista.
-        Apenas alertas com deve_persistir=True devem ser enviados para este método.
+        Insere o alerta ou ignora caso já exista.
         """
+
         if id_ultima_medicao_origem <= 0:
             raise ValueError("id_ultima_medicao_origem deve ser maior que zero.")
 
-        gerado_em = self._agora_iso()
+        gerado_em = self._agora()
 
-        with sqlite3.connect(self.caminho_banco) as conexao:
-            cursor = conexao.cursor()
-
+        with self.conexao.cursor() as cursor:
             cursor.execute(
                 """
-                INSERT OR IGNORE INTO alertas_chuva (
+                INSERT INTO alertas_chuva (
                     id_ultima_medicao_origem,
                     data_hora_ultima_medicao,
                     nivel_alerta,
@@ -84,7 +87,8 @@ class RepositorioAlertasSQLite:
                     justificativa_alerta,
                     gerado_em
                 )
-                VALUES (?, ?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                ON CONFLICT (id_ultima_medicao_origem) DO NOTHING
                 """,
                 (
                     id_ultima_medicao_origem,
@@ -96,48 +100,46 @@ class RepositorioAlertasSQLite:
                 ),
             )
 
-            conexao.commit()
+            inseriu = cursor.rowcount == 1
 
-            if cursor.rowcount == 1:
-                return True
+        self.conexao.commit()
 
-        return self.alerta_existe(id_ultima_medicao_origem)
+        return inseriu or self.alerta_existe(id_ultima_medicao_origem)
 
     def alerta_existe(self, id_ultima_medicao_origem: int) -> bool:
-        """Verifica se já existe alerta para a medição final informada."""
-        with sqlite3.connect(self.caminho_banco) as conexao:
-            cursor = conexao.cursor()
+        """Verifica se já existe alerta para a medição informada."""
+
+        with self.conexao.cursor() as cursor:
             cursor.execute(
                 """
                 SELECT 1
                 FROM alertas_chuva
-                WHERE id_ultima_medicao_origem = ?
+                WHERE id_ultima_medicao_origem = %s
                 LIMIT 1
                 """,
                 (id_ultima_medicao_origem,),
             )
+
             linha = cursor.fetchone()
 
         return linha is not None
 
     def contar_alertas(self) -> int:
         """Retorna a quantidade total de alertas persistidos."""
-        with sqlite3.connect(self.caminho_banco) as conexao:
-            cursor = conexao.cursor()
+
+        with self.conexao.cursor() as cursor:
             cursor.execute("SELECT COUNT(*) FROM alertas_chuva")
             resultado = cursor.fetchone()
 
-        return int(resultado[0])
+        return int(resultado[0]) if resultado else 0
 
     def listar_todos(self, limite: int = 100) -> List[Dict[str, object]]:
         """Lista os alertas persistidos."""
+
         if limite <= 0:
             raise ValueError("O limite deve ser maior que zero.")
 
-        with sqlite3.connect(self.caminho_banco) as conexao:
-            conexao.row_factory = sqlite3.Row
-            cursor = conexao.cursor()
-
+        with self.conexao.cursor() as cursor:
             cursor.execute(
                 """
                 SELECT
@@ -150,23 +152,27 @@ class RepositorioAlertasSQLite:
                     gerado_em
                 FROM alertas_chuva
                 ORDER BY id_ultima_medicao_origem ASC
-                LIMIT ?
+                LIMIT %s
                 """,
                 (limite,),
             )
 
+            colunas = [desc[0] for desc in cursor.description]
             linhas = cursor.fetchall()
 
-        return [dict(linha) for linha in linhas]
+        return [dict(zip(colunas, linha)) for linha in linhas]
 
     def remover_todos_alertas(self) -> int:
         """Remove todos os alertas persistidos."""
-        with sqlite3.connect(self.caminho_banco) as conexao:
-            cursor = conexao.cursor()
-            cursor.execute("DELETE FROM alertas_chuva")
-            conexao.commit()
-            return int(cursor.rowcount)
 
-    def _agora_iso(self) -> str:
-        """Gera timestamp em formato ISO para o instante do alerta."""
-        return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        with self.conexao.cursor() as cursor:
+            cursor.execute("DELETE FROM alertas_chuva")
+            linhas_removidas = cursor.rowcount
+
+        self.conexao.commit()
+
+        return int(linhas_removidas)
+
+    def _agora(self) -> datetime:
+        """Retorna o timestamp atual como datetime."""
+        return datetime.now()

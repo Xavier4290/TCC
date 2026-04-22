@@ -1,12 +1,12 @@
 import sqlite3
 import psycopg2
-from psycopg2.extensions import connection
 
+from psycopg2.extensions import connection
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List
 
-from app.config import CONFING_POSTGRE
+from app.config import CONFIG_POSTGRES
 from pc.analisador_evento import ResultadoAnaliseEvento
 from app.modelos import Medicao
 
@@ -19,32 +19,19 @@ class RepositorioAnaliticoSQLite:
     brutas, preservando rastreabilidade e permitindo recalcular a análise no futuro.
     """
 
-    def __init__(self) -> None:
-        self._conexao: connection = self._criar_conexao()
-
+    def __init__(self, conexao):
+        self.conexao = conexao
+        
+    @staticmethod
+    def criar_conexao() -> connection:
+        """Cria e retorna uma nova conexão com o PostgreSQL."""
+        return psycopg2.connect(**CONFIG_POSTGRES)
 
     def inicializar_banco(self) -> None:
-        """Cria a tabela de análises, caso ainda não exista."""
-        
-    def _criar_conexao(self) -> connection:
-        """Cria e retorna uma conexão com o banco"""
-        try:
-            return psycopg2.connect(
-                host=CONFING_POSTGRE["host"],
-                user=CONFING_POSTGRE["user"],
-                password=CONFING_POSTGRE["password"],
-                database=CONFING_POSTGRE["database"]
-            )
-        except Exception as e:
-            raise RuntimeError(f"Erro ao conectar no PostgreSQL: {e}")
-        
-    def inicializar_banco(self) -> None:
-        """Cria a tabela de análises, caso ainda não exista."""
+        """Cria a tabela de análises."""
 
-        with self._conexao.cursor() as cursor:
-
-            cursor.execute(
-                """
+        with self.conexao.cursor() as cursor:
+            cursor.execute("""
                 CREATE TABLE IF NOT EXISTS analises_chuva (
                     id SERIAL PRIMARY KEY,
                     id_ultima_medicao_origem INTEGER NOT NULL UNIQUE,
@@ -74,48 +61,38 @@ class RepositorioAnaliticoSQLite:
                     justificativa_resumida TEXT NOT NULL,
                     analisado_em TIMESTAMP NOT NULL
                 )
-                """
-            )
+            """)
 
-            cursor.execute(
-                """
+            cursor.execute("""
                 CREATE INDEX IF NOT EXISTS idx_analises_chuva_id_ultima
                 ON analises_chuva (id_ultima_medicao_origem)
-                """
-            )
+            """)
 
-        # Commit fora do cursor (boa prática)
-        self._conexao.commit()
+        self.conexao.commit()
 
-    def fechar_conexao(self) -> None:
-        """Fecha a conexão com o banco"""
-        if self._conexao and self._conexao.closed == 0:
-            self._conexao.close()
+    def fechar_conexao(self):
+        if self.conexao and self.conexao.closed == 0:
+            self.conexao.close()
             
-    
+    #Arrumar essa função mais tarde
     def inserir_ou_confirmar_analise(
         self,
         id_ultima_medicao_origem: int,
         data_hora_ultima_medicao: str,
         resultado: ResultadoAnaliseEvento,
     ) -> bool:
-        """
-        Insere a análise da janela ou confirma como válida caso ela já exista.
-        Isso torna a persistência analítica idempotente para a mesma medição final.
-        """
+
         if id_ultima_medicao_origem <= 0:
             raise ValueError("id_ultima_medicao_origem deve ser maior que zero.")
 
-        analisado_em = self._agora_iso()
+        analisado_em = self._agora()
         features = resultado.features
         classificacao = resultado.classificacao
 
-        with sqlite3.connect(self.caminho_banco) as conexao:
-            cursor = conexao.cursor()
-
+        with self.conexao.cursor() as cursor:
             cursor.execute(
                 """
-                INSERT OR IGNORE INTO analises_chuva (
+                INSERT INTO analises_chuva (
                     id_ultima_medicao_origem,
                     data_hora_ultima_medicao,
                     quantidade_medicoes,
@@ -143,7 +120,13 @@ class RepositorioAnaliticoSQLite:
                     justificativa_resumida,
                     analisado_em
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                    %s, %s, %s, %s, %s
+                )
+                ON CONFLICT (id_ultima_medicao_origem)
+                DO NOTHING
                 """,
                 (
                     id_ultima_medicao_origem,
@@ -175,48 +158,45 @@ class RepositorioAnaliticoSQLite:
                 ),
             )
 
-            conexao.commit()
+            resultado = cursor.fetchone()
+            self.conexao.commit()
 
-            if cursor.rowcount == 1:
-                return True
-
-        return self.analise_existe(id_ultima_medicao_origem)
+        return resultado is not None
 
     def analise_existe(self, id_ultima_medicao_origem: int) -> bool:
-        """Verifica se já existe análise persistida para a medição final informada."""
-        with sqlite3.connect(self.caminho_banco) as conexao:
-            cursor = conexao.cursor()
+        """Verifica se já existe análise persistida para a medição informada."""
+
+        with self.conexao.cursor() as cursor:
             cursor.execute(
                 """
                 SELECT 1
                 FROM analises_chuva
-                WHERE id_ultima_medicao_origem = ?
+                WHERE id_ultima_medicao_origem = %s
                 LIMIT 1
                 """,
                 (id_ultima_medicao_origem,),
             )
+
             linha = cursor.fetchone()
 
         return linha is not None
 
     def contar_analises(self) -> int:
         """Retorna a quantidade total de análises persistidas."""
-        with sqlite3.connect(self.caminho_banco) as conexao:
-            cursor = conexao.cursor()
+
+        with self.conexao.cursor() as cursor:
             cursor.execute("SELECT COUNT(*) FROM analises_chuva")
             resultado = cursor.fetchone()
 
-        return int(resultado[0])
+        return int(resultado[0]) if resultado else 0
 
     def listar_todas(self, limite: int = 100) -> List[Dict[str, object]]:
         """Lista as análises persistidas, ordenadas pela medição final de origem."""
+
         if limite <= 0:
             raise ValueError("O limite deve ser maior que zero.")
 
-        with sqlite3.connect(self.caminho_banco) as conexao:
-            conexao.row_factory = sqlite3.Row
-            cursor = conexao.cursor()
-
+        with self.conexao.cursor() as cursor:
             cursor.execute(
                 """
                 SELECT
@@ -241,24 +221,28 @@ class RepositorioAnaliticoSQLite:
                     analisado_em
                 FROM analises_chuva
                 ORDER BY id_ultima_medicao_origem ASC
-                LIMIT ?
+                LIMIT %s
                 """,
                 (limite,),
             )
 
+            colunas = [desc[0] for desc in cursor.description]
             linhas = cursor.fetchall()
 
-        return [dict(linha) for linha in linhas]
+        return [dict(zip(colunas, linha)) for linha in linhas]
 
     def remover_todas_analises(self) -> int:
         """Remove todas as análises persistidas."""
-        with sqlite3.connect(self.caminho_banco) as conexao:
-            cursor = conexao.cursor()
-            cursor.execute("DELETE FROM analises_chuva")
-            conexao.commit()
-            return int(cursor.rowcount)
 
-    def _agora_iso(self) -> str:
-        """Gera timestamp em formato ISO para o instante da análise."""
-        return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        with self.conexao.cursor() as cursor:
+            cursor.execute("DELETE FROM analises_chuva")
+            linhas_afetadas = cursor.rowcount
+
+        self.conexao.commit()
+
+        return linhas_afetadas if linhas_afetadas is not None else 0
+
+    def _agora(self) -> datetime:
+        """Retorna timestamp atual como datetime (compatível com PostgreSQL)."""
+        return datetime.now()
     
