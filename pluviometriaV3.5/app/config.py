@@ -1,6 +1,7 @@
 from pathlib import Path
 
 
+
 # Diretório raiz do projeto.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -12,6 +13,15 @@ CAMINHO_BANCO_SQLITE = DATA_DIR / "pluviometria_local.db"
 
 # Caminho do banco central usado no lado do PC durante o desenvolvimento.
 CAMINHO_BANCO_CENTRAL_PC = DATA_DIR / "pluviometria_central_pc.db"
+
+# Conexão com o banco postgres
+CONFIG_POSTGRES = {
+    "host": "100.74.148.84",
+    "user": "postgres",
+    "password": "1234",
+    "database": "Pluvio"
+}
+
 
 # Configurações já definidas no planejamento arquitetural.
 INTERVALO_MEDICAO_SEGUNDOS = 15

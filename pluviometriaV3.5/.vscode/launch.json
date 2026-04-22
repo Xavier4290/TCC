@@ -1,0 +1,12 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Rodar como módulo",
+      "type": "python",
+      "request": "launch",
+      "module": "pc.repositorio_central",
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}

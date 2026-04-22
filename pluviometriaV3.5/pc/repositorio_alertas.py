@@ -2,8 +2,9 @@ import sqlite3
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List
+import psycopg2
 
-from app.config import CAMINHO_BANCO_CENTRAL_PC
+from app.config import CONFIG_POSTGRES
 from pc.gerador_alertas import ResultadoGeracaoAlerta
 
 
@@ -15,37 +16,45 @@ class RepositorioAlertasSQLite:
     arquitetural do projeto e permitindo inspeção operacional independente.
     """
 
-    def __init__(self, caminho_banco: Path | str = CAMINHO_BANCO_CENTRAL_PC) -> None:
-        self.caminho_banco = Path(caminho_banco)
-        self.caminho_banco.parent.mkdir(parents=True, exist_ok=True)
+    # def __init__(self, caminho_banco: Path | str = CONFIG_POSTGRES) -> None:
+    #     self.caminho_banco = Path(caminho_banco)
+    #     self.caminho_banco.parent.mkdir(parents=True, exist_ok=True)
+    
+    def __init__(self, conexao) -> None:
+        self.conexao = conexao
+    
+    def criar_conexao():
+        return psycopg2.connect(**CONFIG_POSTGRES)
 
     def inicializar_banco(self) -> None:
         """Cria a tabela de alertas, caso ainda não exista."""
-        with sqlite3.connect(self.caminho_banco) as conexao:
-            cursor = conexao.cursor()
+        with self.conexao.cursor() as cursor:
 
+            # Criação da tabela
             cursor.execute(
                 """
                 CREATE TABLE IF NOT EXISTS alertas_chuva (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id SERIAL PRIMARY KEY,
                     id_ultima_medicao_origem INTEGER NOT NULL UNIQUE,
-                    data_hora_ultima_medicao TEXT NOT NULL,
+                    data_hora_ultima_medicao TIMESTAMP NOT NULL,
                     nivel_alerta TEXT NOT NULL,
                     mensagem_alerta TEXT NOT NULL,
                     justificativa_alerta TEXT NOT NULL,
-                    gerado_em TEXT NOT NULL
+                    gerado_em TIMESTAMP NOT NULL
                 )
                 """
             )
 
+            # Criação do índice
             cursor.execute(
                 """
                 CREATE INDEX IF NOT EXISTS idx_alertas_chuva_id_ultima
                 ON alertas_chuva (id_ultima_medicao_origem)
                 """
             )
-
-            conexao.commit()
+        
+        # Commit fora do cursor (boa prática)
+        self.conexao.commit()
 
     def inserir_ou_confirmar_alerta(
         self,

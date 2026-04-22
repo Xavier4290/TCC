@@ -1,11 +1,17 @@
 import sqlite3
+
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List
 
-from app.config import CAMINHO_BANCO_CENTRAL_PC
-from app.modelos import Medicao
 
+import sys
+#print("EXEC:", __name__)
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from app.config import CONFIG_POSTGRES 
+from app.modelos import Medicao
 
 class RepositorioCentralSQLite:
     """
@@ -13,7 +19,7 @@ class RepositorioCentralSQLite:
     Nesta fase, ele persiste os lotes recebidos em SQLite para validar durabilidade.
     """
 
-    def __init__(self, caminho_banco: Path | str = CAMINHO_BANCO_CENTRAL_PC) -> None:
+    def __init__(self, caminho_banco: Path | str = CONFIG_POSTGRES ) -> None:
         self.caminho_banco = Path(caminho_banco)
         self.caminho_banco.parent.mkdir(parents=True, exist_ok=True)
 
