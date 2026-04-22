@@ -1,9 +1,12 @@
 import sqlite3
+import psycopg2
+from psycopg2.extensions import connection
+
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List
 
-from app.config import CAMINHO_BANCO_CENTRAL_PC
+from app.config import CONFING_POSTGRE
 from pc.analisador_evento import ResultadoAnaliseEvento
 from app.modelos import Medicao
 
@@ -16,45 +19,60 @@ class RepositorioAnaliticoSQLite:
     brutas, preservando rastreabilidade e permitindo recalcular a análise no futuro.
     """
 
-    def __init__(self, caminho_banco: Path | str = CAMINHO_BANCO_CENTRAL_PC) -> None:
-        self.caminho_banco = Path(caminho_banco)
-        self.caminho_banco.parent.mkdir(parents=True, exist_ok=True)
+    def __init__(self) -> None:
+        self._conexao: connection = self._criar_conexao()
+
 
     def inicializar_banco(self) -> None:
         """Cria a tabela de análises, caso ainda não exista."""
-        with sqlite3.connect(self.caminho_banco) as conexao:
-            cursor = conexao.cursor()
+        
+    def _criar_conexao(self) -> connection:
+        """Cria e retorna uma conexão com o banco"""
+        try:
+            return psycopg2.connect(
+                host=CONFING_POSTGRE["host"],
+                user=CONFING_POSTGRE["user"],
+                password=CONFING_POSTGRE["password"],
+                database=CONFING_POSTGRE["database"]
+            )
+        except Exception as e:
+            raise RuntimeError(f"Erro ao conectar no PostgreSQL: {e}")
+        
+    def inicializar_banco(self) -> None:
+        """Cria a tabela de análises, caso ainda não exista."""
+
+        with self._conexao.cursor() as cursor:
 
             cursor.execute(
                 """
                 CREATE TABLE IF NOT EXISTS analises_chuva (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id SERIAL PRIMARY KEY,
                     id_ultima_medicao_origem INTEGER NOT NULL UNIQUE,
-                    data_hora_ultima_medicao TEXT NOT NULL,
+                    data_hora_ultima_medicao TIMESTAMP NOT NULL,
                     quantidade_medicoes INTEGER NOT NULL,
                     intervalo_medicao_segundos INTEGER NOT NULL,
                     janela_total_segundos INTEGER NOT NULL,
                     pulsos_totais INTEGER NOT NULL,
-                    chuva_total_mm REAL NOT NULL,
-                    taxa_equivalente_mm_h REAL NOT NULL,
-                    media_pulsos_por_intervalo REAL NOT NULL,
-                    media_mm_por_intervalo REAL NOT NULL,
+                    chuva_total_mm DOUBLE PRECISION NOT NULL,
+                    taxa_equivalente_mm_h DOUBLE PRECISION NOT NULL,
+                    media_pulsos_por_intervalo DOUBLE PRECISION NOT NULL,
+                    media_mm_por_intervalo DOUBLE PRECISION NOT NULL,
                     max_pulsos_em_intervalo INTEGER NOT NULL,
-                    max_mm_em_intervalo REAL NOT NULL,
+                    max_mm_em_intervalo DOUBLE PRECISION NOT NULL,
                     intervalos_com_chuva INTEGER NOT NULL,
-                    percentual_intervalos_com_chuva REAL NOT NULL,
+                    percentual_intervalos_com_chuva DOUBLE PRECISION NOT NULL,
                     consecutivos_finais_com_chuva INTEGER NOT NULL,
-                    tendencia_taxa_mm_h REAL NOT NULL,
-                    direcao_tendencia TEXT NOT NULL,
-                    indice_atividade_imediata REAL NOT NULL,
-                    classificacao_chuva TEXT NOT NULL,
-                    severidade_operacional TEXT NOT NULL,
-                    tendencia_final TEXT NOT NULL,
-                    sinal_pre_alerta TEXT NOT NULL,
-                    alerta_recomendado TEXT NOT NULL,
-                    score_confianca REAL NOT NULL,
+                    tendencia_taxa_mm_h DOUBLE PRECISION NOT NULL,
+                    direcao_tendencia VARCHAR(50) NOT NULL,
+                    indice_atividade_imediata DOUBLE PRECISION NOT NULL,
+                    classificacao_chuva VARCHAR(50) NOT NULL,
+                    severidade_operacional VARCHAR(50) NOT NULL,
+                    tendencia_final VARCHAR(50) NOT NULL,
+                    sinal_pre_alerta VARCHAR(50) NOT NULL,
+                    alerta_recomendado VARCHAR(50) NOT NULL,
+                    score_confianca DOUBLE PRECISION NOT NULL,
                     justificativa_resumida TEXT NOT NULL,
-                    analisado_em TEXT NOT NULL
+                    analisado_em TIMESTAMP NOT NULL
                 )
                 """
             )
@@ -66,8 +84,15 @@ class RepositorioAnaliticoSQLite:
                 """
             )
 
-            conexao.commit()
+        # Commit fora do cursor (boa prática)
+        self._conexao.commit()
 
+    def fechar_conexao(self) -> None:
+        """Fecha a conexão com o banco"""
+        if self._conexao and self._conexao.closed == 0:
+            self._conexao.close()
+            
+    
     def inserir_ou_confirmar_analise(
         self,
         id_ultima_medicao_origem: int,

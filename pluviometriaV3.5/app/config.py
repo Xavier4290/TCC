@@ -11,6 +11,14 @@ DATA_DIR = BASE_DIR / "data"
 # Caminho padrão do banco SQLite local.
 CAMINHO_BANCO_SQLITE = DATA_DIR / "pluviometria_local.db"
 
+# Configuração do servidor postgre
+CONFING_POSTGRE = {
+    'host': '100.74.148.84',
+    'user': 'postgres',
+    'password': '1234',
+    'database': 'Pluvio'
+}
+
 # Caminho do banco central usado no lado do PC durante o desenvolvimento.
 CAMINHO_BANCO_CENTRAL_PC = DATA_DIR / "pluviometria_central_pc.db"
 
