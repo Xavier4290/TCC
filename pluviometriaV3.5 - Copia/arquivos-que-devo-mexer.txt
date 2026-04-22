@@ -1,0 +1,6 @@
+Arquivos que devo mexer no momento em que análiso este arquivo, são: 
+repositorio_central.py, 
+repositorio_analitico.py, 
+repositorio_alertas.py.
+
+Devo conecta-los ao código do que desenvolvi do TCC.

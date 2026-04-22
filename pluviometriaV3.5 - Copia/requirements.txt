@@ -1,0 +1,6 @@
+# Dependência gráfica usada pelo monitor em tempo real
+matplotlib>=3.8
+
+# Dependência opcional para execução futura em GPIO real no Raspberry Pi.
+# Em ambiente Windows/PC de desenvolvimento, não é necessária.
+RPi.GPIO; sys_platform == "linux" and (platform_machine == "armv7l" or platform_machine == "aarch64")

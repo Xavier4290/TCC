@@ -22,7 +22,7 @@ while opcao == True:
                    "Digite 3 para enviar as informações para a nuvem \n"+
                    "Digite 4 para deletar a tabela \n"+
                    "Digite 5 para sair\n"))
-    
+  
     match op:
         case 1:
             conexaoComDB.selecionarTabela();
@@ -76,6 +76,8 @@ while opcao == True:
             print("Tabela deletada com sucesso!")
             conexaoComDB.criarTabela()
             
-        case _:
+        case 5:
             print("Tchau, tchau!")
             opcao = False
+        case _:
+            print("Não é possível ler caractérs. Insira um número.")
