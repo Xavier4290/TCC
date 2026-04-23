@@ -1,18 +1,24 @@
 import time
+
 from datetime import datetime
 
 from app.cliente_envio import ClienteEnvioSocket
 from app.coletor_gpio import ColetorGPIO
 from app.coletor_simulado import ColetorSimulado
+from app.manutencao_local import ManutencaoLocal
+from app.orquestrador import OrquestradorPluviometria
+from app.repositorio_medicoes import RepositorioMedicoesSQLite
+from app.sincronizador import SincronizadorMedicoes
+
 from app.config import (
     MANUTENCAO_LOCAL_HABILITADA,
     MODO_EXECUCAO,
     PADRAO_PULSOS_SIMULADOS,
 )
-from app.manutencao_local import ManutencaoLocal
-from app.orquestrador import OrquestradorPluviometria
-from app.repositorio_medicoes import RepositorioMedicoesSQLite
-from app.sincronizador import SincronizadorMedicoes
+
+from pc.conexaoMega import conexaoMega
+from app.config import CONFIG_BACKUP
+from app.config import INTERVALO_BACKUP
 
 
 def criar_coletor():
@@ -62,9 +68,18 @@ def main() -> None:
         print(f"Manutenção local habilitada: {MANUTENCAO_LOCAL_HABILITADA}")
         orquestrador.iniciar()
 
+        conexao = conexaoMega(**CONFIG_BACKUP)
+        proximo_backup = time.time()       
+
         while True:
             time.sleep(1)
 
+            if time.time() >= proximo_backup:
+                conexao.executar_backup()
+                print("[BACKUP] Enviado para a nuvem")
+
+                proximo_backup = time.time() + INTERVALO_BACKUP
+            
     except KeyboardInterrupt:
         print("\nEncerramento solicitado pelo usuário.")
     except Exception as erro:

@@ -1,0 +1,13 @@
+id,data_hora,pulsos,chuva_intervalo_mm,chuva_acumulada_mm,status_sync,tentativas_envio,criado_em,enviado_em,ultimo_erro
+11,2026-04-22 17:56:30,0,0.0,8.25,PENDENTE,0,2026-04-22 17:56:45.130866,,
+12,2026-04-22 17:56:45,0,0.0,8.25,PENDENTE,0,2026-04-22 17:57:00.142236,,
+1,2026-04-22 17:54:00,0,0.0,0.0,PENDENTE,6,2026-04-22 17:54:15.057047,,Falha no envio do lote: Object of type datetime is not JSON serializable
+2,2026-04-22 17:54:15,1,0.25,0.25,PENDENTE,6,2026-04-22 17:54:30.059116,,Falha no envio do lote: Object of type datetime is not JSON serializable
+3,2026-04-22 17:54:30,2,0.5,0.75,PENDENTE,6,2026-04-22 17:54:45.070697,,Falha no envio do lote: Object of type datetime is not JSON serializable
+4,2026-04-22 17:54:45,4,1.0,1.75,PENDENTE,6,2026-04-22 17:55:00.082346,,Falha no envio do lote: Object of type datetime is not JSON serializable
+5,2026-04-22 17:55:00,6,1.5,3.25,PENDENTE,6,2026-04-22 17:55:15.084176,,Falha no envio do lote: Object of type datetime is not JSON serializable
+6,2026-04-22 17:55:15,8,2.0,5.25,PENDENTE,6,2026-04-22 17:55:30.085954,,Falha no envio do lote: Object of type datetime is not JSON serializable
+7,2026-04-22 17:55:30,5,1.25,6.5,PENDENTE,6,2026-04-22 17:55:45.102637,,Falha no envio do lote: Object of type datetime is not JSON serializable
+8,2026-04-22 17:55:45,4,1.0,7.5,PENDENTE,6,2026-04-22 17:56:00.108978,,Falha no envio do lote: Object of type datetime is not JSON serializable
+9,2026-04-22 17:56:00,3,0.75,8.25,PENDENTE,6,2026-04-22 17:56:15.116956,,Falha no envio do lote: Object of type datetime is not JSON serializable
+10,2026-04-22 17:56:15,0,0.0,8.25,PENDENTE,6,2026-04-22 17:56:30.117668,,Falha no envio do lote: Object of type datetime is not JSON serializable

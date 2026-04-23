@@ -200,8 +200,9 @@ class OrquestradorPluviometria:
         if pendente is None:
             return None
 
-        criado_em = datetime.strptime(pendente.criado_em, "%Y-%m-%d %H:%M:%S")
+        criado_em = pendente.criado_em
         diferenca = datetime.now() - criado_em
+        
         return diferenca.total_seconds()
 
     def _validar_configuracao(self) -> None:

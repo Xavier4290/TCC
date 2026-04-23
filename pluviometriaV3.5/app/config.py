@@ -1,6 +1,10 @@
 from pathlib import Path
+import os
+from datetime import datetime
 
+_agora = datetime.now().strftime('%Y%m%d_%H%M%S')
 
+nome_arquivo = f"backup_medicoes_{_agora}.csv"
 
 # Diretório raiz do projeto.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -30,6 +34,16 @@ CONFIG_POSTGRES = {
     "database": "Pluvio"
 }
 
+#Conexão com a nuvem
+CONFIG_BACKUP = {
+   "db_config": CONFIG_POSTGRES,
+    "tabela": "medicoes",
+    "pasta_mega": "/BackupsMedicoes",
+    "mega_cmd_path": r"C:\Users\guilh\AppData\Local\MEGAcmd\mega-put",
+    "pasta_backup": "backup",
+}
+
+INTERVALO_BACKUP = 60  # segundos (ajuste conforme necessário
 
 # Configurações já definidas no planejamento arquitetural.
 INTERVALO_MEDICAO_SEGUNDOS = 15
