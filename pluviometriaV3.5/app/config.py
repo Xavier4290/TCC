@@ -1,5 +1,4 @@
 from pathlib import Path
-import os
 from datetime import datetime
 
 _agora = datetime.now().strftime('%Y%m%d_%H%M%S')
