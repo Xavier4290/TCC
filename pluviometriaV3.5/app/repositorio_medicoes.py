@@ -1,4 +1,3 @@
-import sqlite3
 import psycopg2
 from psycopg2.extensions import connection
 from datetime import datetime
@@ -6,7 +5,7 @@ from pathlib import Path
 from typing import List, Optional
 from psycopg2.extras import RealDictCursor
 
-from .config import CAMINHO_BANCO_SQLITE, STATUS_ENVIADO, STATUS_PENDENTE, CONFIG_POSTGRES
+from .config import STATUS_ENVIADO, STATUS_PENDENTE, CONFIG_POSTGRES
 from .modelos import Medicao, MedicaoPersistida
 
 

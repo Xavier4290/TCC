@@ -1,4 +1,3 @@
-import sqlite3
 import psycopg2
 
 from psycopg2.extensions import connection
@@ -9,7 +8,7 @@ from app.config import CONFIG_POSTGRES
 
 
 import sys
-#print("EXEC:", __name__)
+
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 

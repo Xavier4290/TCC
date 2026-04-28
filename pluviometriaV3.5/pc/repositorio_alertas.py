@@ -16,10 +16,6 @@ class RepositorioAlertasSQLite:
     Mantém os alertas em tabela separada da análise, preservando a evolução
     arquitetural do projeto e permitindo inspeção operacional independente.
     """
-
-    # def __init__(self, caminho_banco: Path | str = CONFIG_POSTGRES) -> None:
-    #     self.caminho_banco = Path(caminho_banco)
-    #     self.caminho_banco.parent.mkdir(parents=True, exist_ok=True)
     
     def __init__(self, conexao: connection) -> None:
         self.conexao = conexao
