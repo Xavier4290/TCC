@@ -1,0 +1,1 @@
+# Marcador da pasta app como pacote Python
